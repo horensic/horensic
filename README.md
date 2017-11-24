@@ -10,6 +10,6 @@ My Python library for developing digital forensic tools
 * TODO: NTFS parsing (MFT, $I30)
 * TODO: Korean unicode encoding/decoding
 
-### script
+### scripts
 * File hashing
 * JPG steganography scan
