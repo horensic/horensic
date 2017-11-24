@@ -8,9 +8,8 @@ My Python library for developing digital forensic tools
 * Timestamp convert (filetime, ...)
 * Predefined regular expression
 * TODO: NTFS parsing (MFT, $I30)
-* TODO: korean encoding/decoding
-
+* TODO: Korean unicode encoding/decoding
 
 ### script
-* file hashing
-* TODO: jpg steganography scan
+* File hashing
+* JPG steganography scan
