@@ -1,6 +1,10 @@
-from distutils.core import setup
+from setuptools import setup, find_packages
 
 version = '0.1'
+
+install_requires = []
+
+setup_requires = []
 
 setup(
     name='horensic',
@@ -9,7 +13,11 @@ setup(
     author='Seonho Lee',
     author_email='horensic@gmail.com',
     url='https://github.com/horensic/horensic',
-    # packages=[],
-    scripts=['scripts/filehash',
-             'scripts/jpgscan'],
-    )
+    packages=find_packages(),
+    install_requires=install_requires,
+    setup_requires=setup_requires,
+    scripts=[
+        'scripts/filehash',
+        'scripts/jpgscan'
+    ],
+)
