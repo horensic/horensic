@@ -10,3 +10,7 @@ RE_IP6 = ""
 # HTML
 RE_HTML_URL = "href='([^']*?)'"
 RE_HTML_SCRIPT = "<\s*script*?>(.?)</\s*script\s*>"
+
+# Miscellaneous
+RE_LINE_COMMENT = "(//.*)"
+RE_BLOCK_COMMENT = "(?:\/\*(?:[^*]|(?:\*+[^*\/]))*\*+\/)"

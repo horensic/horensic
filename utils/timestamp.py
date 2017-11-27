@@ -10,3 +10,6 @@ def filetime(v, bias=None):
     dt = "{0:x}".format(v)
     us = int(dt, 16) / 10.
     return datetime(1601, 1, 1) + timedelta(microseconds=us)
+
+def format_convert(t):
+    pass
