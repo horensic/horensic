@@ -29,14 +29,19 @@ class NTFS(object):
 
     def read_vbr(self):
 
-        self.volume = open(self.volume_path, 'rb')
-        self.volume.seek(0)
-        vbr = self.volume.read(VBR_SZ)
-        self.vbr = dict(zip(VBR_FIELDS, struct.unpack(VBR_FORMAT, vbr)))
+        try:
+            self.volume = open(self.volume_path, 'rb')
+        except PermissionError as err_msg:
+            print("Requires administrator privileges")
+            exit(-1)
+        else:
+            self.volume.seek(0)
+            vbr = self.volume.read(VBR_SZ)
+            self.vbr = dict(zip(VBR_FIELDS, struct.unpack(VBR_FORMAT, vbr)))
 
-        if not self.check_vbr():
-            # raise InvalidNTFS~~Exception
-            pass
+            if not self.check_vbr():
+                # raise InvalidNTFS~~Exception
+                pass
 
     def read_mft(self):
 
@@ -46,6 +51,9 @@ class NTFS(object):
         mft = self.volume.read(self.MFT_ENTRY_SZ)
 
         return MFT(self.volume, mft)
+
+    def get_mft_list(self):
+        pass
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
@@ -64,6 +72,10 @@ class MFT(object):
         self.volume = volume
         self.mft = mft
         self.header = dict(zip(MFT_RECORD_HDR_FIELDS, struct.unpack(MFT_RECORD_HDR_FORMAT, self.mft[:MFT_RECORD_HDR_SZ])))
+
+        if self.header['alloc_size'] != 1024:
+            # raise InvalidNTFS~~Exception
+            pass
 
         self.attributes = dict()
         self.attributes_size = self.header['real_size'] - self.header['offset']
@@ -87,7 +99,6 @@ class MFT(object):
             return
         c_hdr = self.mft[offset:c_hdr_end]
         common_hdr = dict(zip(ATTR_COMMON_HDR_FIELDS, struct.unpack(ATTR_COMMON_HDR_FORMAT, c_hdr)))
-        print(common_hdr)
         next_hdr = offset + common_hdr['length']
 
         # Resident/Non-Resident Header
@@ -97,7 +108,8 @@ class MFT(object):
             nr_hdr = self.mft[c_hdr_end:nr_hdr_end]
             non_resident_hdr = dict(zip(NON_RESIDENT_ATTR_HDR_FIELDS,
                                         struct.unpack(NON_RESIDENT_ATTR_HDR_FORMAT, nr_hdr)))
-            attribute = attribute_table[common_hdr['type']]()
+
+            attribute = attribute_table[common_hdr['type']](non_resident_hdr)
             self.attributes[repr(attribute)] = attribute
         else:
             # resident attribute
@@ -113,10 +125,17 @@ class MFT(object):
 
         self.read_attribute(next_hdr)
 
+    def run(self):
+        if self.attributes['Data'].flag is not True:
+            # raise
+            pass
+
+
     def logfile(self):
         pass
 
     def root(self):
+        # check file name . or mft5
         return INDX()
 
     def check_mft_entry(self):

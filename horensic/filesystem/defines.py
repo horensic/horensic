@@ -195,11 +195,29 @@ class VolumeInformation(object):
 
 class Data(object):
 
+    flag = False
+
     def __init__(self, buf=None):
-        pass
+        if isinstance(buf, dict):
+            # non-resident
+            self.flag = True
+            for key in buf:
+                setattr(self, key, buf[key])
+        else:
+            # resident
+            self.data = buf
 
     def __repr__(self):
         return 'Data'
+
+    def __iter__(self):
+        if self.flag:
+            for key in dir(self):
+                if not key.startswith('-'):
+                    yield key, getattr(self, key)
+        else:
+            # raise or output one by one
+            raise NotImplementedError
 
 
 class IndexRoot(object):
