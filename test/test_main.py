@@ -5,5 +5,4 @@ from horensic.filesystem.ntfs import *
 
 if __name__ == '__main__':
     test = NTFS()
-    test.read_vbr()
-    test.read_mft()
+    mft = test.read_mft()

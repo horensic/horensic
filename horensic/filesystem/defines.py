@@ -26,7 +26,6 @@ VBR_FIELDS = [
 ]
 VBR_SZ = struct.calcsize(VBR_FORMAT)
 
-
 # Master File Table
 
 # MFT Record
@@ -50,6 +49,7 @@ MFT_RECORD_HDR_FIELDS = [
 MFT_RECORD_HDR_SZ = struct.calcsize(MFT_RECORD_HDR_FORMAT)
 
 # Attributes
+ATTR_COMMON_HDR_FORMAT = '<IIcBHHH'
 ATTR_COMMON_HDR_FIELDS = [
     'type',
     'length',
@@ -59,14 +59,18 @@ ATTR_COMMON_HDR_FIELDS = [
     'flags',
     'id'
 ]
+ATTR_COMMON_HDR_SZ = struct.calcsize(ATTR_COMMON_HDR_FORMAT)
 
+RESIDENT_ATTR_HDR_FORMAT = '<IHcc'
 RESIDENT_ATTR_HDR_FIELDS = [
     'size',
     'offset',
     'flag',
-    'name'
+    'unused'
 ]
+RESIDENT_ATTR_HDR_SZ = struct.calcsize(RESIDENT_ATTR_HDR_FORMAT)
 
+NON_RESIDENT_ATTR_HDR_FORMAT = '<QQHHIQQQ'
 NON_RESIDENT_ATTR_HDR_FIELDS = [
     'start_vcn',
     'end_vcn',
@@ -75,10 +79,11 @@ NON_RESIDENT_ATTR_HDR_FIELDS = [
     'unused',
     'alloc_size',
     'real_size',
-    'init_size',
-    'name'
+    'init_size'
 ]
+NON_RESIDENT_ATTR_HDR_SZ = struct.calcsize(NON_RESIDENT_ATTR_HDR_FORMAT)
 
+STANDARD_INFO_FORMAT = '<QQQQIIIIIIQQ'
 STANDARD_INFO_FIELDS = [
     'create_time',
     'modified_time',
@@ -93,6 +98,7 @@ STANDARD_INFO_FIELDS = [
     'quota',
     'usn'  # Update Sequence Number (UCN)
 ]
+STANDARD_INFO_SZ = struct.calcsize(STANDARD_INFO_FORMAT)
 
 ATTR_LIST_FIELDS = [
     'type',
@@ -103,3 +109,124 @@ ATTR_LIST_FIELDS = [
     'reference_addr',
     'id'
 ]
+
+
+# Attribute Class list
+
+
+class StandardInformation(object):
+
+    def __init__(self, buf):
+        fields = dict(zip(STANDARD_INFO_FIELDS, struct.unpack(STANDARD_INFO_FORMAT, buf)))
+        for key in fields:
+            setattr(self, key, fields[key])
+
+    def __repr__(self):
+        return 'Standard Information'
+
+class AttributeList(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class FileName(object):
+
+    def __init__(self, buf):
+        pass
+
+
+class ObjectId(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class SecurityDescriptor(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class VolumeName(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class VolumeInformation(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class Data(object):
+
+    def __init__(self, buf):
+        pass
+
+    def __repr__(self):
+        return 'Data'
+
+
+class IndexRoot(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class IndexAllocation(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class Bitmap(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class SymbolicLink(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class EAInformation(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class EA(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+
+
+class LoggedUtilityStream(object):
+
+    def __init__(self, buf):
+        raise NotImplementedError
+# Attribute dispatch table
+
+
+attribute_table = {
+    0x10: StandardInformation,
+    0x20: AttributeList,
+    0x30: FileName,
+    0x40: ObjectId,
+    0x50: SecurityDescriptor,
+    0x60: VolumeName,
+    0x70: VolumeInformation,
+    0x80: Data,
+    0x90: IndexRoot,
+    0xA0: IndexAllocation,
+    0xB0: Bitmap,
+    0xC0: SymbolicLink,
+    # 0xC0: RepasePoint,
+    0xD0: EAInformation,
+    0xE0: EA,
+    0x100: LoggedUtilityStream
+}
