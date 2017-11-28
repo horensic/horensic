@@ -6,6 +6,7 @@ from .defines import *
 class NTFS(object):
 
     NTFS_SIGNATURE = b"NTFS    "  # \x4E\x54\x46\x53\x20\x20\x20\x20
+    MFT_ENTRY_SZ = 1024
 
     def __init__(self, volume=None):
 
@@ -42,7 +43,7 @@ class NTFS(object):
         self.cluster = self.vbr['bps'] * self.vbr['spc']  # 4096
         mft_address = self.vbr['mft'] * self.cluster
         self.volume.seek(mft_address)
-        mft = self.volume.read(self.vbr['clusters_per_mft_record'])
+        mft = self.volume.read(self.MFT_ENTRY_SZ)
 
         return MFT(self.volume, mft)
 
@@ -62,7 +63,7 @@ class MFT(object):
 
         self.volume = volume
         self.mft = mft
-        self.header = dict(zip(MFT_RECORD_HDR_FIELDS, struct.unpack(MFT_RECORD_HDR_FORMAT, self.mft[:48])))
+        self.header = dict(zip(MFT_RECORD_HDR_FIELDS, struct.unpack(MFT_RECORD_HDR_FORMAT, self.mft[:MFT_RECORD_HDR_SZ])))
 
         self.attributes = dict()
         self.attributes_size = self.header['real_size'] - self.header['offset']
@@ -79,32 +80,38 @@ class MFT(object):
         pass
 
     def read_attribute(self, offset):
+
+        # Common Header
         c_hdr_end = offset + ATTR_COMMON_HDR_SZ
-        if self.attributes_size == c_hdr_end:
+        if self.attributes_size <= c_hdr_end:
             return
         c_hdr = self.mft[offset:c_hdr_end]
         common_hdr = dict(zip(ATTR_COMMON_HDR_FIELDS, struct.unpack(ATTR_COMMON_HDR_FORMAT, c_hdr)))
+        print(common_hdr)
+        next_hdr = offset + common_hdr['length']
 
-        # data run is processed externally
-        if common_hdr['non_resident'] == b'\x01':  # non-resident
+        # Resident/Non-Resident Header
+        if common_hdr['non_resident'] == b'\x01':
+            # non-resident attribute
             nr_hdr_end = c_hdr_end + NON_RESIDENT_ATTR_HDR_SZ
             nr_hdr = self.mft[c_hdr_end:nr_hdr_end]
             non_resident_hdr = dict(zip(NON_RESIDENT_ATTR_HDR_FIELDS,
                                         struct.unpack(NON_RESIDENT_ATTR_HDR_FORMAT, nr_hdr)))
-            # temp
-            attribute = attribute_table[0x80]("Temp")
-        else:  # resident
+            attribute = attribute_table[common_hdr['type']]()
+            self.attributes[repr(attribute)] = attribute
+        else:
+            # resident attribute
             r_hdr_end = c_hdr_end + RESIDENT_ATTR_HDR_SZ
             r_hdr = self.mft[c_hdr_end:r_hdr_end]
             resident_hdr = dict(zip(RESIDENT_ATTR_HDR_FIELDS, struct.unpack(RESIDENT_ATTR_HDR_FORMAT, r_hdr)))
 
-            a_buf_start = r_hdr_end + resident_hdr['offset']
+            # Attribute Header
+            a_buf_start = offset + resident_hdr['offset']  # Offset of attribute header includes common header and attribute header
             a_buf_end = a_buf_start + resident_hdr['size']
-
             attribute = attribute_table[common_hdr['type']](self.mft[a_buf_start:a_buf_end])
-            print(attribute)
+            self.attributes[repr(attribute)] = attribute
 
-        self.attributes[repr(attribute)] = attribute
+        self.read_attribute(next_hdr)
 
     def logfile(self):
         pass
@@ -122,6 +129,3 @@ class INDX(object):
 
     def __init__(self):
         pass
-
-
-

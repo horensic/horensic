@@ -110,6 +110,22 @@ ATTR_LIST_FIELDS = [
     'id'
 ]
 
+FILENAME_FORMAT = '<QQQQQQQIIBc'
+FILENAME_FIELDS = [
+    'file_Ref_Address',
+    'create_time',
+    'modified_time',
+    'mft_modified_time',
+    'last_accessed_time',
+    'file_alloc_size',
+    'file_real_size',
+    'flags',
+    'reparse_value',
+    'name_len',
+    'namespace',
+]
+FILENAME_SZ = struct.calcsize(FILENAME_FORMAT)
+
 
 # Attribute Class list
 
@@ -122,7 +138,13 @@ class StandardInformation(object):
             setattr(self, key, fields[key])
 
     def __repr__(self):
-        return 'Standard Information'
+        return 'StandardInformation'
+
+    def __iter__(self):
+        for key in dir(self):
+            if not key.startswith('-'):
+                yield key, getattr(self, key)
+
 
 class AttributeList(object):
 
@@ -133,36 +155,47 @@ class AttributeList(object):
 class FileName(object):
 
     def __init__(self, buf):
-        pass
+        fields = dict(zip(FILENAME_FIELDS, struct.unpack(FILENAME_FORMAT, buf[:FILENAME_SZ])))
+        for key in fields:
+            setattr(self, key, fields[key])
+        self.name = buf[FILENAME_SZ:].decode('utf16')
+
+    def __repr__(self):
+        return 'FileName'
+
+    def __iter__(self):
+        for key in dir(self):
+            if not key.startswith('-'):
+                yield key, getattr(self, key)
 
 
 class ObjectId(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class SecurityDescriptor(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class VolumeName(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class VolumeInformation(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class Data(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         pass
 
     def __repr__(self):
@@ -183,31 +216,34 @@ class IndexAllocation(object):
 
 class Bitmap(object):
 
-    def __init__(self, buf):
-        raise NotImplementedError
+    def __init__(self, buf=None):
+        pass
+
+    def __repr__(self):
+        return 'Bitmap'
 
 
 class SymbolicLink(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class EAInformation(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class EA(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 
 
 class LoggedUtilityStream(object):
 
-    def __init__(self, buf):
+    def __init__(self, buf=None):
         raise NotImplementedError
 # Attribute dispatch table
 
