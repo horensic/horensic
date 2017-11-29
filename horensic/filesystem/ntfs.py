@@ -1,6 +1,5 @@
 import os
 import _io
-import struct
 from .defines import *
 
 
@@ -27,6 +26,9 @@ class NTFS(object):
 
     def __repr__(self):
         return 'NTFS'
+
+    def __del__(self):
+        self.volume.close()
 
     def read_vbr(self):
 
@@ -58,7 +60,11 @@ class NTFS(object):
 
         mft0 = self.read_mft()
         mft0.data_run()
+        mft_sz = mft0.header['alloc_size']
 
+        for length, offset in mft0.data_c_run:
+            for i in range(int((length * self.cluster) / mft_sz)):
+                yield (offset * self.cluster) + (mft_sz * i)
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
@@ -139,11 +145,6 @@ class MFT(object):
 
         if self.attributes['Data'].flag:
 
-            start_vcn = self.attributes['Data'].start_vcn
-            end_vcn = self.attributes['Data'].end_vcn
-
-            print(start_vcn, end_vcn)
-
             cluster_run = bytearray(self.attributes['Data'].data)
 
             start = 0
@@ -154,7 +155,7 @@ class MFT(object):
                 head = cluster_run[start:end].hex()
                 offset = int(head[0])
                 length = int(head[1])
-
+                # c is cluster
                 c_len_end = end+length
                 c_ofs_end = c_len_end+offset
                 c_len = cluster_run[end:c_len_end]
@@ -165,7 +166,8 @@ class MFT(object):
                 self.data_c_run.append(run)
                 start = c_ofs_end
         else:
-            pass
+            # raise
+            return
 
     def logfile(self):
         pass
