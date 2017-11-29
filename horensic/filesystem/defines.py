@@ -126,6 +126,33 @@ FILENAME_FIELDS = [
 ]
 FILENAME_SZ = struct.calcsize(FILENAME_FORMAT)
 
+INDX_R_HDR_FORMAT = '<IIIB3s'
+INDX_R_HDR_FIELDS = [
+    'type',
+    'rule',
+    'index_record_size',
+    'index_record_cluster_size'
+]
+INDX_R_HDR_SZ = struct.calcsize(INDX_R_HDR_FORMAT)
+
+INDX_N_HDR_FORMAT = '<IIII'
+INDX_N_HDR_FIELDS = [
+    'start_offset',
+    'real_size',
+    'alloc_size',
+    'flags'
+]
+INDX_N_HDR_SZ = struct.calcsize(INDX_N_HDR_FORMAT)
+
+INDX_ENTRY_FORMAT = '<QHHI'
+INDX_ENTRY_FIELDS = [
+    'file_ref_addr',
+    'entry_size',
+    'content_size',
+    'flags'
+]
+INDX_ENTRY_SZ = struct.calcsize(INDX_ENTRY_FORMAT)
+
 
 # Attribute Class list
 
@@ -133,6 +160,7 @@ FILENAME_SZ = struct.calcsize(FILENAME_FORMAT)
 class StandardInformation(object):
 
     def __init__(self, buf):
+        print("[defines/StandardInformation] ", len(buf))
         fields = dict(zip(STANDARD_INFO_FIELDS, struct.unpack(STANDARD_INFO_FORMAT, buf)))
         for key in fields:
             setattr(self, key, fields[key])
@@ -159,6 +187,7 @@ class FileName(object):
         for key in fields:
             setattr(self, key, fields[key])
         self.name = buf[FILENAME_SZ:].decode('utf16')
+        print("[defines/FileName] ", self.name)
 
     def __repr__(self):
         return 'FileName'
@@ -172,7 +201,8 @@ class FileName(object):
 class ObjectId(object):
 
     def __init__(self, buf=None):
-        raise NotImplementedError
+        # raise NotImplementedError
+        pass
 
 
 class SecurityDescriptor(object):
@@ -184,7 +214,8 @@ class SecurityDescriptor(object):
 class VolumeName(object):
 
     def __init__(self, buf=None):
-        raise NotImplementedError
+        # raise NotImplementedError
+        pass
 
 
 class VolumeInformation(object):
@@ -223,7 +254,21 @@ class Data(object):
 class IndexRoot(object):
 
     def __init__(self, buf):
-        raise NotImplementedError
+        idx_root = buf
+        # Index root header
+        r_hdr = dict(zip(INDX_R_HDR_FIELDS, struct.unpack(INDX_R_HDR_FORMAT, idx_root[:INDX_R_HDR_SZ])))
+        for r_key in r_hdr:
+            setattr(self, r_key, r_hdr[r_key])
+
+        # Index node header
+        idx_root = idx_root[INDX_R_HDR_SZ:]
+        n_hdr = dict(zip(INDX_N_HDR_FIELDS, struct.unpack(INDX_N_HDR_FORMAT, idx_root[:INDX_N_HDR_SZ])))
+        for n_key in n_hdr:
+            setattr(self, n_key, n_hdr[n_key])
+
+        # Index entry
+        pass
+
 
 
 class IndexAllocation(object):

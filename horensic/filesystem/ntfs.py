@@ -56,15 +56,33 @@ class NTFS(object):
 
         return MFT(self.volume, mft)
 
-    def get_mft_list(self):
+    def get_mft_list(self, mft0):
 
-        mft0 = self.read_mft()
-        mft0.data_run()
-        mft_sz = mft0.header['alloc_size']
+        mft = mft0
+        mft.data_run()
+        mft_sz = mft.header['alloc_size']
 
-        for length, offset in mft0.data_c_run:
+        for length, offset in mft.data_c_run:
             for i in range(int((length * self.cluster) / mft_sz)):
                 yield (offset * self.cluster) + (mft_sz * i)
+
+    def get_root(self):
+
+        mft = self.read_mft()
+        mft_sz = mft.header['alloc_size']
+        root_name = str(b'.\x00', 'UTF16')
+        rn = 5  # record number
+        for mft_ofs in self.get_mft_list(mft):
+
+            if rn != 0:
+                rn -= 1
+                continue
+            self.volume.seek(mft_ofs)
+            mft_entry = MFT(self.volume, self.volume.read(mft_sz))
+
+            if mft_entry.attributes['FileName'].name == root_name:
+                break
+            print(mft_entry.attributes['FileName'].name)
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
