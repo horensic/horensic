@@ -74,7 +74,7 @@ NON_RESIDENT_ATTR_HDR_FORMAT = '<QQHHIQQQ'
 NON_RESIDENT_ATTR_HDR_FIELDS = [
     'start_vcn',
     'end_vcn',
-    'run_list',
+    'offset',
     'comp_unit_size',
     'unused',
     'alloc_size',

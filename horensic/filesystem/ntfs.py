@@ -1,5 +1,6 @@
 import os
 import _io
+import struct
 from .defines import *
 
 
@@ -33,6 +34,7 @@ class NTFS(object):
             self.volume = open(self.volume_path, 'rb')
         except PermissionError as err_msg:
             print("Requires administrator privileges")
+            print(err_msg)
             exit(-1)
         else:
             self.volume.seek(0)
@@ -53,7 +55,10 @@ class NTFS(object):
         return MFT(self.volume, mft)
 
     def get_mft_list(self):
-        pass
+
+        mft0 = self.read_mft()
+        mft0.data_run()
+
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
@@ -77,13 +82,15 @@ class MFT(object):
             # raise InvalidNTFS~~Exception
             pass
 
+        if not self.check_mft_entry():
+            # raise InvalidNTFS~~Exception
+            pass
+
         self.attributes = dict()
         self.attributes_size = self.header['real_size'] - self.header['offset']
         self.read_attribute(self.header['offset'])
 
-        if not self.check_mft_entry():
-            # raise InvalidNTFS~~Exception
-            pass
+        self.data_c_run = list()
 
     def __repr__(self):
         return 'MFT Entry'
@@ -108,6 +115,9 @@ class MFT(object):
             nr_hdr = self.mft[c_hdr_end:nr_hdr_end]
             non_resident_hdr = dict(zip(NON_RESIDENT_ATTR_HDR_FIELDS,
                                         struct.unpack(NON_RESIDENT_ATTR_HDR_FORMAT, nr_hdr)))
+            nr_data_sz = common_hdr['length'] - (ATTR_COMMON_HDR_SZ + NON_RESIDENT_ATTR_HDR_SZ)
+            nr_data_end = nr_hdr_end + nr_data_sz
+            non_resident_hdr['data'] = self.mft[nr_hdr_end:nr_data_end]
 
             attribute = attribute_table[common_hdr['type']](non_resident_hdr)
             self.attributes[repr(attribute)] = attribute
@@ -125,11 +135,37 @@ class MFT(object):
 
         self.read_attribute(next_hdr)
 
-    def run(self):
-        if self.attributes['Data'].flag is not True:
-            # raise
-            pass
+    def data_run(self):
 
+        if self.attributes['Data'].flag:
+
+            start_vcn = self.attributes['Data'].start_vcn
+            end_vcn = self.attributes['Data'].end_vcn
+
+            print(start_vcn, end_vcn)
+
+            cluster_run = bytearray(self.attributes['Data'].data)
+
+            start = 0
+            while True:
+                end = start + 1
+                if cluster_run[start:end] == b'\x00':
+                    break
+                head = cluster_run[start:end].hex()
+                offset = int(head[0])
+                length = int(head[1])
+
+                c_len_end = end+length
+                c_ofs_end = c_len_end+offset
+                c_len = cluster_run[end:c_len_end]
+                c_ofs = cluster_run[c_len_end:c_ofs_end]
+                c_len.reverse(), c_ofs.reverse()
+
+                run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
+                self.data_c_run.append(run)
+                start = c_ofs_end
+        else:
+            pass
 
     def logfile(self):
         pass

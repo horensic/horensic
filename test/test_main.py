@@ -8,5 +8,4 @@ from utils.timestamp import *
 if __name__ == '__main__':
     test = NTFS()
     mft = test.read_mft()
-    for k, v in iter(mft.attributes['Data']):
-        print(k, v)
+    test.get_mft_list()
