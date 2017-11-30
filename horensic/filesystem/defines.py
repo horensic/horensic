@@ -155,13 +155,23 @@ INDX_ENTRY_SZ = struct.calcsize(INDX_ENTRY_FORMAT)
 INDX_ENTRY_VCN_FORMAT = '<Q'
 INDX_ENTRY_VCN_SZ = struct.calcsize(INDX_ENTRY_VCN_FORMAT)
 
+INDX_REC_HDR_FORMAT = '<IHHQQ'
+INDX_REC_HDR_FIELDS = [
+    'signature',
+    'fixup_offset',
+    'fixup_entries',
+    'lsn',
+    'vcn'
+]
+INDX_REC_HDR_SZ = struct.calcsize(INDX_REC_HDR_FORMAT)
+
+
 # Attribute Class list
 
 
 class StandardInformation(object):
 
     def __init__(self, buf):
-        print("[defines/StandardInformation] ", len(buf))
         fields = dict(zip(STANDARD_INFO_FIELDS, struct.unpack(STANDARD_INFO_FORMAT, buf)))
         for key in fields:
             setattr(self, key, fields[key])
@@ -299,9 +309,64 @@ class IndexRoot(object):
 
 class IndexAllocation(object):
 
-    def __init__(self, buf):
-        raise NotImplementedError
+    flag = False
 
+    def __init__(self, buf):
+
+        if isinstance(buf, dict):
+            # non-resident
+            self.flag = True
+            for key in buf:
+                setattr(self, key, buf[key])
+        else:
+            # When followed the runlist
+            idx_record = buf
+
+            # Index record header
+            r_hdr = dict(zip(INDX_REC_HDR_FIELDS, struct.unpack(INDX_REC_HDR_FORMAT, idx_record[:INDX_REC_HDR_SZ])))
+            for r_key in r_hdr:
+                setattr(self, r_key, r_hdr[r_key])
+
+            # Index node header
+            idx_node = idx_record[INDX_REC_HDR_SZ:]
+            n_hdr = dict(zip(INDX_N_HDR_FIELDS, struct.unpack(INDX_N_HDR_FORMAT, idx_node[:INDX_N_HDR_SZ])))
+            for n_key in n_hdr:
+                setattr(self, n_key, n_hdr[n_key])
+
+            # Index entry list
+            self.index_entry = list()
+            idx_entry_buf = idx_node[getattr(self, 'start_offset'):getattr(self, 'alloc_size')]
+
+            while len(idx_entry_buf) > 0:
+                e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
+                idx_entry_buf = idx_entry_buf[INDX_ENTRY_SZ:]
+
+                if e_hdr['content_size'] > 0:
+                    filename_buf = idx_entry_buf[:e_hdr['content_size']]
+                    idx_entry_buf = idx_entry_buf[e_hdr['content_size']:]
+                    filename = FileName(filename_buf).name
+                    e_hdr['filename'] = filename
+                    idx_entry_vcn = idx_entry_buf[:INDX_ENTRY_VCN_SZ]
+                else:
+                    idx_entry_vcn = idx_entry_buf[:INDX_ENTRY_VCN_SZ]
+
+                idx_entry_buf = idx_entry_buf[INDX_ENTRY_VCN_SZ:]
+                e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
+                self.index_entry.append(e_hdr)
+
+                if e_hdr['flags'] & 0x2 == 0x2:
+                    break
+
+    def __repr__(self):
+        return 'IndexAllocation'
+
+    def __iter__(self):
+        if self.flag:
+            for key in dir(self):
+                if not key.startswith('-'):
+                    yield key, getattr(self, key)
+        else:
+            raise NotImplementedError
 
 class Bitmap(object):
 
@@ -333,7 +398,10 @@ class EA(object):
 class LoggedUtilityStream(object):
 
     def __init__(self, buf=None):
-        raise NotImplementedError
+        # raise NotImplementedError
+        pass
+
+
 # Attribute dispatch table
 
 
