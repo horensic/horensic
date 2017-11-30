@@ -152,7 +152,8 @@ INDX_ENTRY_FIELDS = [
     'flags'
 ]
 INDX_ENTRY_SZ = struct.calcsize(INDX_ENTRY_FORMAT)
-
+INDX_ENTRY_VCN_FORMAT = '<Q'
+INDX_ENTRY_VCN_SZ = struct.calcsize(INDX_ENTRY_VCN_FORMAT)
 
 # Attribute Class list
 
@@ -253,6 +254,8 @@ class Data(object):
 
 class IndexRoot(object):
 
+    FOLDER_TYPE = 0x30
+
     def __init__(self, buf):
         idx_root = buf
         # Index root header
@@ -261,14 +264,37 @@ class IndexRoot(object):
             setattr(self, r_key, r_hdr[r_key])
 
         # Index node header
-        idx_root = idx_root[INDX_R_HDR_SZ:]
-        n_hdr = dict(zip(INDX_N_HDR_FIELDS, struct.unpack(INDX_N_HDR_FORMAT, idx_root[:INDX_N_HDR_SZ])))
+        idx_node = idx_root[INDX_R_HDR_SZ:]
+        n_hdr = dict(zip(INDX_N_HDR_FIELDS, struct.unpack(INDX_N_HDR_FORMAT, idx_node[:INDX_N_HDR_SZ])))
         for n_key in n_hdr:
             setattr(self, n_key, n_hdr[n_key])
 
-        # Index entry
-        pass
+        # Index entry list
+        self.index_entry = list()
+        idx_entry_buf = idx_node[getattr(self, 'start_offset'):getattr(self, 'alloc_size')]
 
+        while len(idx_entry_buf) > 0:
+            e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
+            idx_entry_buf = idx_entry_buf[INDX_ENTRY_SZ:]
+
+            if e_hdr['content_size'] > 0:
+                filename_buf = idx_entry_buf[:e_hdr['content_size']]
+                idx_entry_buf = idx_entry_buf[e_hdr['content_size']:]
+                filename = FileName(filename_buf).name
+                e_hdr['filename'] = filename
+                idx_entry_vcn = idx_entry_buf[:INDX_ENTRY_VCN_SZ]
+            else:
+                idx_entry_vcn = idx_entry_buf[:INDX_ENTRY_VCN_SZ]
+
+            idx_entry_buf = idx_entry_buf[INDX_ENTRY_VCN_SZ:]
+            e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
+            self.index_entry.append(e_hdr)
+
+            if e_hdr['flags'] & 0x2 == 0x2:
+                break
+
+    def __repr__(self):
+        return 'IndexRoot'
 
 
 class IndexAllocation(object):
