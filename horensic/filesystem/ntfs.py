@@ -88,6 +88,22 @@ class NTFS(object):
             # print(mft_entry.attributes['FileName'].name)
         return root
 
+    def get_index_list(self, mft):
+
+        root = mft
+        root.index_run()
+        record_sz = root.attributes['IndexRoot'].index_record_size
+
+        for length, offset in root.index_c_run:
+            for i in range(int((length * self.cluster) / record_sz)):
+                # yield (offset * self.cluster) + (record_sz * i)
+                record_ofs = (offset * self.cluster) + (record_sz * i)
+                self.volume.seek(record_ofs)
+                record = self.volume.read(record_sz)
+                RECORD = IndexAllocation(record)
+                for k, v in iter(RECORD):
+                    print(k, v)
+
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
 
@@ -119,6 +135,7 @@ class MFT(object):
         self.read_attribute(self.header['offset'])
 
         self.data_c_run = list()
+        self.index_c_run = list()
 
     def __repr__(self):
         return 'MFT Entry'
@@ -199,20 +216,32 @@ class MFT(object):
             # raise
             return
 
-    def logfile(self):
-        pass
+    def index_run(self):
+        if self.attributes['IndexAllocation'].flag:
 
-    def root(self):
-        # check file name . or mft5
-        return INDX()
+            cluster_run = bytearray(self.attributes['IndexAllocation'].data)
+
+            start = 0
+            while True:
+                end = start + 1
+                if cluster_run[start:end] == b'\x00':
+                    break
+                head = cluster_run[start:end].hex()
+                offset = int(head[0])
+                length = int(head[1])
+                # c is cluster
+                c_len_end = end + length
+                c_ofs_end = c_len_end + offset
+                c_len = cluster_run[end:c_len_end]
+                c_ofs = cluster_run[c_len_end:c_ofs_end]
+                c_len.reverse(), c_ofs.reverse()
+
+                run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
+                self.index_c_run.append(run)
+                start = c_ofs_end
+        else:
+            # raise
+            return
 
     def check_mft_entry(self):
         return self.header['signature'] == self.MFT_SIGNATURE
-
-
-class INDX(object):
-
-    INDX_SIGNATURE = b'INDX'
-
-    def __init__(self):
-        pass
