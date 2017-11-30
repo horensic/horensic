@@ -69,6 +69,7 @@ class NTFS(object):
     def get_root(self):
 
         mft = self.read_mft()
+        root = None
         mft_sz = mft.header['alloc_size']
         root_name = str(b'.\x00', 'UTF16')
         rn = 5  # record number
@@ -79,10 +80,13 @@ class NTFS(object):
                 continue
             self.volume.seek(mft_ofs)
             mft_entry = MFT(self.volume, self.volume.read(mft_sz))
+            # mft_entry.attributes['IndexAllocation']
 
             if mft_entry.attributes['FileName'].name == root_name:
+                root = mft_entry
                 break
-            print(mft_entry.attributes['FileName'].name)
+            # print(mft_entry.attributes['FileName'].name)
+        return root
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
@@ -139,8 +143,16 @@ class MFT(object):
             nr_hdr = self.mft[c_hdr_end:nr_hdr_end]
             non_resident_hdr = dict(zip(NON_RESIDENT_ATTR_HDR_FIELDS,
                                         struct.unpack(NON_RESIDENT_ATTR_HDR_FORMAT, nr_hdr)))
-            nr_data_sz = common_hdr['length'] - (ATTR_COMMON_HDR_SZ + NON_RESIDENT_ATTR_HDR_SZ)
-            nr_data_end = nr_hdr_end + nr_data_sz
+
+            if offset + non_resident_hdr['offset'] > nr_hdr_end:  # Attribute name exists
+                nr_name_sz = (offset + non_resident_hdr['offset']) - nr_hdr_end
+                non_resident_hdr['name'] = str(self.mft[nr_hdr_end:nr_hdr_end + nr_name_sz], encoding='UTF16')
+                nr_hdr_end = offset + non_resident_hdr['offset']
+                nr_data_end = nr_hdr_end + nr_name_sz
+            else:
+                nr_data_sz = common_hdr['length'] - (ATTR_COMMON_HDR_SZ + NON_RESIDENT_ATTR_HDR_SZ)
+                nr_data_end = nr_hdr_end + nr_data_sz
+
             non_resident_hdr['data'] = self.mft[nr_hdr_end:nr_data_end]
 
             attribute = attribute_table[common_hdr['type']](non_resident_hdr)
