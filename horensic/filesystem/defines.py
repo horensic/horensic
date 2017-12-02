@@ -113,7 +113,7 @@ ATTR_LIST_FIELDS = [
 FILENAME_FORMAT = '<QQQQQQQIIBc'
 FILENAME_FIELDS = [
     'file_Ref_Address',
-    'create_time',
+    'created_time',
     'modified_time',
     'mft_modified_time',
     'last_accessed_time',
@@ -280,33 +280,32 @@ class IndexRoot(object):
 
         # Index entry list
         self.index_entry = list()
-        if n_hdr['flags'] == 1:
-            idx_entry_buf = idx_node[n_hdr['start_offset']:n_hdr['alloc_size']]
+        idx_entry_buf = idx_node[n_hdr['start_offset']:n_hdr['alloc_size']]
 
-            while len(idx_entry_buf) > 0:
-                e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
-                idx_entry = idx_entry_buf[:e_hdr['entry_size']]
-                idx_entry = idx_entry[INDX_ENTRY_SZ:]
+        while len(idx_entry_buf) > 0:
+            e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
+            idx_entry = idx_entry_buf[:e_hdr['entry_size']]
+            idx_entry = idx_entry[INDX_ENTRY_SZ:]
 
 
-                if e_hdr['content_size'] > 0:  # file name exists
-                    filename_buf = idx_entry[:e_hdr['content_size']]
-                    idx_entry = idx_entry[e_hdr['content_size']:]
-                    filename = FileName(filename_buf).name
-                    e_hdr['filename'] = filename
+            if e_hdr['content_size'] > 0:  # file name exists
+                filename_buf = idx_entry[:e_hdr['content_size']]
+                idx_entry = idx_entry[e_hdr['content_size']:]
+                filename = FileName(filename_buf)
+                e_hdr['filename'] = filename
 
-                if e_hdr['flags'] & 0x1 == 0x1:  # child node exists
-                    padding_size = len(idx_entry) - INDX_ENTRY_VCN_SZ
-                    idx_entry_vcn = idx_entry[padding_size:padding_size + INDX_ENTRY_VCN_SZ]
-                    e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
+            if e_hdr['flags'] & 0x1 == 0x1:  # child node exists
+                padding_size = len(idx_entry) - INDX_ENTRY_VCN_SZ
+                idx_entry_vcn = idx_entry[padding_size:padding_size + INDX_ENTRY_VCN_SZ]
+                e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
 
-                self.index_entry.append(e_hdr)
+            self.index_entry.append(e_hdr)
 
-                idx_entry_buf = idx_entry_buf[e_hdr['entry_size']:]
+            idx_entry_buf = idx_entry_buf[e_hdr['entry_size']:]
 
-                # end of node
-                if e_hdr['flags'] & 0x2 == 0x2:
-                    break
+            # end of node
+            if e_hdr['flags'] & 0x2 == 0x2:
+                break
 
     def __repr__(self):
         return 'IndexRoot'
@@ -371,7 +370,7 @@ class IndexAllocation(object):
                 if e_hdr['content_size'] > 0:  # file name exists
                     filename_buf = idx_entry[:e_hdr['content_size']]
                     idx_entry = idx_entry[e_hdr['content_size']:]
-                    filename = FileName(filename_buf).name
+                    filename = FileName(filename_buf)
                     e_hdr['filename'] = filename
 
                 if e_hdr['flags'] & 0x1 == 0x1:  # child node exists

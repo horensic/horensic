@@ -132,7 +132,6 @@ class MFT(object):
             # raise InvalidNTFS~~Exception
             pass
 
-        print(self.header['real_size'])
         if self.header['real_size'] >= 0x200:
             self.fixup()
 
@@ -253,9 +252,8 @@ class MFT(object):
             # raise
             return
 
-    def get_index_list(self):
+    def get_index(self):
         pass
-
 
     def check_mft_entry(self):
         return self.header['signature'] == self.MFT_SIGNATURE

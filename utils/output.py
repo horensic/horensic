@@ -2,7 +2,7 @@ import os
 import csv
 import sqlite3
 
-class CSVWriter:
+class CSVWriter(object):
 
     def __init__(self, name, path=None):
         if os.path.exists(path):
@@ -26,7 +26,7 @@ class CSVWriter:
         self.csv_file.close()
 
 
-class SQLiteDB:
+class SQLiteDB(object):
 
     def __init__(self, name, path=None):
         if os.path.exists(path):
@@ -46,3 +46,9 @@ class SQLiteDB:
 
     def __del__(self):
         self.con.close()
+
+
+class HTMLTable(object):
+
+    def __init__(self):
+        pass

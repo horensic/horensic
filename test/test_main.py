@@ -7,8 +7,8 @@ from horensic.filesystem.ntfs import *
 if __name__ == '__main__':
     test = NTFS()
     root = test.get_root()
-    test.get_index_list(root)
-    #f = open(os.path.abspath('../test/index.txt'), 'wb')
-    #for ofs in test.get_index_list(root):
-    #    f.write(ofs)
-    #f.close()
+    mft0 = test.read_mft()
+    f = open(os.path.abspath('../test/mftlist.txt'), 'wt')
+    for mft in test.get_mft_list(mft0):
+        f.write(str(mft) + '\n')
+    f.close()

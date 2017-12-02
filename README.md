@@ -7,7 +7,7 @@ My Python library for developing digital forensic tools
 * Output (CSV, SQLite, HTML)
 * Timestamp convert (filetime, ...)
 * Predefined regular expression
-* TODO: NTFS parsing (MFT, $I30)
+* NTFS parsing (MFT, $I30)
 * TODO: Korean unicode encoding/decoding
 
 ### scripts
