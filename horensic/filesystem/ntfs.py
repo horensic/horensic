@@ -96,11 +96,13 @@ class NTFS(object):
         root = mft
         root.index_run()
         record_sz = root.attributes['IndexRoot'].index_record_size
+        ofs = 0
 
         for length, offset in root.index_c_run:
+            ofs += offset
             for i in range(int((length * self.cluster) / record_sz)):
                 # yield (offset * self.cluster) + (record_sz * i)
-                record_ofs = (offset * self.cluster) + (record_sz * i)
+                record_ofs = (ofs * self.cluster) + (record_sz * i)
                 self.volume.seek(record_ofs)
                 rec_buf = self.volume.read(record_sz)
                 record = IndexAllocation(rec_buf)
@@ -218,7 +220,11 @@ class MFT(object):
                 c_ofs = cluster_run[c_len_end:c_ofs_end]
                 c_len.reverse(), c_ofs.reverse()
 
-                run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
+                if c_ofs[0] >> 7 == 1:
+                    c_ofs = 0 - ((int(c_ofs.hex(), 16)^((1 << (offset*8)) -1)) +1)
+                    run = [int(c_len.hex(), 16), c_ofs]
+                else:
+                    run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
                 self.data_c_run.append(run)
                 start = c_ofs_end
         else:
@@ -245,7 +251,11 @@ class MFT(object):
                 c_ofs = cluster_run[c_len_end:c_ofs_end]
                 c_len.reverse(), c_ofs.reverse()
 
-                run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
+                if c_ofs[0] >> 7 == 1:
+                    c_ofs = 0 - ((int(c_ofs.hex(), 16)^((1 << (offset*8)) -1)) +1)
+                    run = [int(c_len.hex(), 16), c_ofs]
+                else:
+                    run = [int(c_len.hex(), 16), int(c_ofs.hex(), 16)]
                 self.index_c_run.append(run)
                 start = c_ofs_end
         else:
