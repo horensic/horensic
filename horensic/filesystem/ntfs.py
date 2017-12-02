@@ -64,10 +64,11 @@ class NTFS(object):
         mft = mft0
         mft.data_run()
         mft_sz = mft.header['alloc_size']
-
+        ofs = 0
         for length, offset in mft.data_c_run:
+            ofs += offset
             for i in range(int((length * self.cluster) / mft_sz)):
-                yield (offset * self.cluster) + (mft_sz * i)
+                yield (ofs * self.cluster) + (mft_sz * i)
 
     def get_root(self):
 
@@ -101,9 +102,9 @@ class NTFS(object):
                 # yield (offset * self.cluster) + (record_sz * i)
                 record_ofs = (offset * self.cluster) + (record_sz * i)
                 self.volume.seek(record_ofs)
-                record = self.volume.read(record_sz)
-                RECORD = IndexAllocation(record)
-                yield RECORD
+                rec_buf = self.volume.read(record_sz)
+                record = IndexAllocation(rec_buf)
+                yield record
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE
@@ -131,7 +132,9 @@ class MFT(object):
             # raise InvalidNTFS~~Exception
             pass
 
-        self.fixup()
+        print(self.header['real_size'])
+        if self.header['real_size'] >= 0x200:
+            self.fixup()
 
         self.attributes = dict()
         self.attributes_size = self.header['real_size'] - self.header['offset']
@@ -144,12 +147,11 @@ class MFT(object):
         return 'MFT Entry'
 
     def fixup(self):
-        fixup = self.header['fixup_offset']  # 0x30
-        fixup_entries = self.header['fixup_entries']  # 0x03
+        fixup = self.header['fixup_offset']
+        fixup_entries = self.header['fixup_entries']
         for i in range(1, fixup_entries):
             self.mft[0x200*i-2] = self.mft[fixup+i*2]
             self.mft[0x200*i-1] = self.mft[fixup+i*2+1]
-
 
     def read_attribute(self, offset):
 
@@ -250,6 +252,10 @@ class MFT(object):
         else:
             # raise
             return
+
+    def get_index_list(self):
+        pass
+
 
     def check_mft_entry(self):
         return self.header['signature'] == self.MFT_SIGNATURE
