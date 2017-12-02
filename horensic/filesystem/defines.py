@@ -326,7 +326,6 @@ class IndexAllocation(object):
     INDX_SIGNATURE = b'INDX'
 
     def __init__(self, buf):
-
         if isinstance(buf, dict):
             # non-resident
             self.flag = True
@@ -334,7 +333,7 @@ class IndexAllocation(object):
                 setattr(self, key, buf[key])
         else:
             # When followed the runlist
-            idx_record = buf
+            idx_record = bytearray(buf)
 
             # Index record header
             r_hdr = dict(zip(INDX_REC_HDR_FIELDS, struct.unpack(INDX_REC_HDR_FORMAT, idx_record[:INDX_REC_HDR_SZ])))
@@ -346,6 +345,13 @@ class IndexAllocation(object):
                 print("check")
                 # raise Invalid~
                 pass
+
+            fixup = r_hdr['fixup_offset']
+            fixup_entries = r_hdr['fixup_entries']
+
+            for i in range(1, fixup_entries):
+                idx_record[0x200*i-2] = idx_record[fixup+i*2]
+                idx_record[0x200*i-1] = idx_record[fixup+i*2+1]
 
             # Index node header
             idx_node = idx_record[INDX_REC_HDR_SZ:]

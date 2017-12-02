@@ -55,7 +55,7 @@ class NTFS(object):
         else:
             mft_address = address
         self.volume.seek(mft_address)
-        mft = self.volume.read(self.MFT_ENTRY_SZ)
+        mft = bytearray(self.volume.read(self.MFT_ENTRY_SZ))
 
         return MFT(self.volume, mft)
 
@@ -82,7 +82,7 @@ class NTFS(object):
                 rn -= 1
                 continue
             self.volume.seek(mft_ofs)
-            mft_entry = MFT(self.volume, self.volume.read(mft_sz))
+            mft_entry = MFT(self.volume, bytearray(self.volume.read(mft_sz)))
 
             if mft_entry.attributes['FileName'].name == root_name:
                 root = mft_entry
@@ -131,6 +131,8 @@ class MFT(object):
             # raise InvalidNTFS~~Exception
             pass
 
+        self.fixup()
+
         self.attributes = dict()
         self.attributes_size = self.header['real_size'] - self.header['offset']
         self.read_attribute(self.header['offset'])
@@ -142,7 +144,12 @@ class MFT(object):
         return 'MFT Entry'
 
     def fixup(self):
-        pass
+        fixup = self.header['fixup_offset']  # 0x30
+        fixup_entries = self.header['fixup_entries']  # 0x03
+        for i in range(1, fixup_entries):
+            self.mft[0x200*i-2] = self.mft[fixup+i*2]
+            self.mft[0x200*i-1] = self.mft[fixup+i*2+1]
+
 
     def read_attribute(self, offset):
 
