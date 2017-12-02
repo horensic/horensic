@@ -7,6 +7,12 @@ from utils.timestamp import *
 from horensic.filesystem.ntfs import *
 
 
+class InvalidFileNameException(Exception):
+
+    def __init__(self):
+        super(InvalidFileNameException, self).__init__("Invalid File Name Exception")
+
+
 def parse_command_line():
 
     global args
@@ -25,7 +31,7 @@ def parse_command_line():
 def ValidateDirectory(path):
 
     if not os.path.isdir(path):
-        raise argparse.ArgumentTypeError('Directory does not exist')
+        raise argparse.ArgumentTypeError('Directory does not exist', path)
     else:
         return path
 
@@ -61,22 +67,13 @@ def search_idx_a(ntfs, mft, vcn, name):
                         continue
                 else:
                     continue
-        # raise ~~
-        print("Please check the file name")
-        print(name)
-        return -1
+        raise InvalidFileNameException
     else:
         return -1
 
 
 def search_idx_r(ntfs, mft, name):
-    """
 
-    :param ntfs:
-    :param mft:
-    :param name:
-    :return: MFT number
-    """
     if 'IndexRoot' in mft.attributes:
         for entry in mft.attributes['IndexRoot'].index_entry:
             if 'filename' in entry:
@@ -118,6 +115,8 @@ if __name__ == '__main__':
             idx = file_ref(addr)
             mft_address = mft_list[idx]
             index_mft = volume.read_mft(mft_address)
+
+    print(index_mft.attributes['FileName'].name)
 
     for record in index_mft.attributes['IndexRoot'].index_entry:
         if 'filename' in record:
