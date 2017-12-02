@@ -56,8 +56,8 @@ def search_idx_a(ntfs, mft, vcn, name):
             records.append(r)
 
         for record in records:
-            if record.vcn != vcn:
-                continue
+            #if record.vcn != vcn:
+            #    continue
             for entry in record.index_entry:
 
                 if 'filename' in entry:
