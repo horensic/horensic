@@ -47,10 +47,13 @@ class NTFS(object):
                 # raise InvalidNTFS~~Exception
                 pass
 
-    def read_mft(self):
+    def read_mft(self, address=None):
 
         self.cluster = self.vbr['bps'] * self.vbr['spc']  # 4096
-        mft_address = self.vbr['mft'] * self.cluster
+        if not address:
+            mft_address = self.vbr['mft'] * self.cluster
+        else:
+            mft_address = address
         self.volume.seek(mft_address)
         mft = self.volume.read(self.MFT_ENTRY_SZ)
 
@@ -80,12 +83,11 @@ class NTFS(object):
                 continue
             self.volume.seek(mft_ofs)
             mft_entry = MFT(self.volume, self.volume.read(mft_sz))
-            # mft_entry.attributes['IndexAllocation']
 
             if mft_entry.attributes['FileName'].name == root_name:
                 root = mft_entry
                 break
-            # print(mft_entry.attributes['FileName'].name)
+
         return root
 
     def get_index_list(self, mft):
@@ -101,8 +103,7 @@ class NTFS(object):
                 self.volume.seek(record_ofs)
                 record = self.volume.read(record_sz)
                 RECORD = IndexAllocation(record)
-                for k, v in iter(RECORD):
-                    print(k, v)
+                yield RECORD
 
     def check_vbr(self):
         return self.vbr['oem_id'] == self.NTFS_SIGNATURE

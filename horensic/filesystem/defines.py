@@ -198,7 +198,6 @@ class FileName(object):
         for key in fields:
             setattr(self, key, fields[key])
         self.name = buf[FILENAME_SZ:].decode('utf16')
-        print("[defines/FileName] ", self.name)
 
     def __repr__(self):
         return 'FileName'
@@ -281,33 +280,44 @@ class IndexRoot(object):
 
         # Index entry list
         self.index_entry = list()
-        idx_entry_buf = idx_node[n_hdr['start_offset']:n_hdr['alloc_size']]
+        if n_hdr['flags'] == 1:
+            idx_entry_buf = idx_node[n_hdr['start_offset']:n_hdr['alloc_size']]
 
-        while len(idx_entry_buf) > 0:
-            e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
-            idx_entry = idx_entry_buf[:e_hdr['entry_size']]
-            idx_entry = idx_entry[INDX_ENTRY_SZ:]
+            while len(idx_entry_buf) > 0:
+                e_hdr = dict(zip(INDX_ENTRY_FIELDS, struct.unpack(INDX_ENTRY_FORMAT, idx_entry_buf[:INDX_ENTRY_SZ])))
+                idx_entry = idx_entry_buf[:e_hdr['entry_size']]
+                idx_entry = idx_entry[INDX_ENTRY_SZ:]
 
-            if e_hdr['content_size'] > 0:
-                filename_buf = idx_entry[:e_hdr['content_size']]
-                idx_entry = idx_entry[e_hdr['content_size']:]
-                filename = FileName(filename_buf).name
-                e_hdr['filename'] = filename
 
-            if e_hdr['flags'] & 0x1 == 0x1:
-                idx_entry_vcn = idx_entry[:INDX_ENTRY_VCN_SZ]
-                idx_entry_buf = idx_entry[INDX_ENTRY_VCN_SZ:]
-                e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
+                if e_hdr['content_size'] > 0:  # file name exists
+                    filename_buf = idx_entry[:e_hdr['content_size']]
+                    idx_entry = idx_entry[e_hdr['content_size']:]
+                    filename = FileName(filename_buf).name
+                    e_hdr['filename'] = filename
 
-            self.index_entry.append(e_hdr)
+                if e_hdr['flags'] & 0x1 == 0x1:  # child node exists
+                    padding_size = len(idx_entry) - INDX_ENTRY_VCN_SZ
+                    idx_entry_vcn = idx_entry[padding_size:padding_size + INDX_ENTRY_VCN_SZ]
+                    e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
 
-            idx_entry_buf = idx_entry_buf[e_hdr['entry_size']:]
+                self.index_entry.append(e_hdr)
 
-            if e_hdr['flags'] & 0x2 == 0x2:
-                break
+                idx_entry_buf = idx_entry_buf[e_hdr['entry_size']:]
+
+                # end of node
+                if e_hdr['flags'] & 0x2 == 0x2:
+                    break
 
     def __repr__(self):
         return 'IndexRoot'
+
+    def __iter__(self):
+        for key in dir(self):
+            if not key.startswith('-'):
+                yield key, getattr(self, key)
+
+    def check_node_child(self):
+        return getattr(self, 'flags') == 1
 
 
 class IndexAllocation(object):
@@ -352,21 +362,22 @@ class IndexAllocation(object):
                 idx_entry = idx_entry_buf[:e_hdr['entry_size']]
                 idx_entry = idx_entry[INDX_ENTRY_SZ:]
 
-                if e_hdr['content_size'] > 0:
+                if e_hdr['content_size'] > 0:  # file name exists
                     filename_buf = idx_entry[:e_hdr['content_size']]
                     idx_entry = idx_entry[e_hdr['content_size']:]
                     filename = FileName(filename_buf).name
                     e_hdr['filename'] = filename
 
-                if e_hdr['flags'] & 0x1 == 0x1:
-                    idx_entry_vcn = idx_entry[:INDX_ENTRY_VCN_SZ]
-                    idx_entry_buf = idx_entry[INDX_ENTRY_VCN_SZ:]
+                if e_hdr['flags'] & 0x1 == 0x1:  # child node exists
+                    padding_size = len(idx_entry) - INDX_ENTRY_VCN_SZ
+                    idx_entry_vcn = idx_entry[padding_size:padding_size + INDX_ENTRY_VCN_SZ]
                     e_hdr['vcn'] = struct.unpack(INDX_ENTRY_VCN_FORMAT, idx_entry_vcn)[0]
 
                 self.index_entry.append(e_hdr)
 
                 idx_entry_buf = idx_entry_buf[e_hdr['entry_size']:]
 
+                # end of node
                 if e_hdr['flags'] & 0x2 == 0x2:
                     break
 
