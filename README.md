@@ -1,6 +1,6 @@
 # horensic
 A library for developing digital forensic tools and useful scripts for forensic analysis  
-horensic은 포렌식 도구 개발을 위한 라이브러리와 포렌식 분석을 위해 제작한 스크립트입니다.
+horensic은 포렌식 도구 개발을 위한 라이브러리이며, 포렌식 분석을 위해 제작한 스크립트들을 포함하고 있습니다.
 
 ## Dependencies
 
