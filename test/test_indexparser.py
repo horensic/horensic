@@ -1,6 +1,5 @@
 import os
 import sys
-import struct
 sys.path.insert(0, os.path.dirname(os.path.abspath('../horensic/filesystem')))
 sys.path.insert(0, os.path.dirname(os.path.abspath('../utils')))
 from horensic.filesystem.ntfs import *
@@ -68,9 +67,10 @@ def search_idx_r(ntfs, mft, name):
     else:  # NOT directory's mft
         return -1
 
+
 if __name__ == '__main__':
     # path split
-    target_dir = 'Program Files (x86)' # C:\Program Files (x86)\Microsoft.NET
+    target_dir = 'Program Files (x86)'  # C:\Program Files (x86)\Microsoft.NET
     path_list = target_dir.split('\\')
     mft_list = list()
     # use drive path
