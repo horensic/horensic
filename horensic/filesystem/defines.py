@@ -1,5 +1,7 @@
 import struct
 
+
+""" NTFS """
 # Volume Boot Record
 VBR_FORMAT = '<3s8sHBH5sc10s8sQQQB3sB3sQI426sH'
 VBR_FIELDS = [
@@ -456,3 +458,88 @@ attribute_table = {
     0xE0: EA,
     0x100: LoggedUtilityStream
 }
+
+
+""" FAT32 """
+# Reserved Area
+
+# BIOS Parameter Block
+FAT32_BPB_FORMAT = '<3s8sHBHBHHBHHHIIIHHIHH12sBBBI11s8s'
+FAT32_BPB_FILED = [
+    'JBC',
+    'oem_id',
+    'bps',
+    'spc',
+    'reserved_sc',
+    'num_fats',
+    'root_dir_entry_count',
+    'total_sector16',
+    'media_type',
+    'fat_size16',
+    'spt',
+    'noh',
+    'hidden_sectors',
+    'total_sector32',
+    'fat_size32',
+    'ext_flags',
+    'version',
+    'root_dir_cluster',
+    'fsinfo_s',
+    'backup_boot_s',
+    'reserved0',
+    'drive_num',
+    'reserved1',
+    'boot_signature',
+    'vol_id',
+    'vol_label',
+    'fs_type'
+]
+FAT32_BPB_SZ = struct.calcsize(FAT32_BPB_FORMAT)
+
+# FS INFO
+FSINFO_FORMAT = '<I480sIII14sH'
+FSINFO_FILED = [
+    'signature0',
+    'not_used0',
+    'signature1',
+    'num_of_free_cluster',
+    'next_free_cluster',
+    'not_used1'
+    'signature2'
+]
+FSINFO_SZ = struct.calcsize(FSINFO_FORMAT)
+
+# Directory Entry
+DIR_ENTRY_FORMAT = '<8s3sbbbHHHHHHHI'
+DIR_ENTRY_FILED = [
+    'name',
+    'extension',
+    'attribute',
+    'reserved',
+    'ctimet',
+    'ctime',
+    'cdate',
+    'adate',
+    'start_cluster_hi',
+    'mtime',
+    'mdate',
+    'start_cluster_lo',
+    'size'
+]
+DIR_ENTRY_SZ = struct.calcsize(DIR_ENTRY_FORMAT)
+
+# Long File Name Entry
+LFN_ENTRY_FORMAT = 'B10sBBB12sH4s'
+LFN_ENTRY_FILED = [
+    'seq_num',
+    'name1',
+    'attribute',
+    'reserved1',
+    'check_sum',
+    'name2',
+    'reserved2',
+    'name3'
+]
+LFN_ENTRY_SZ = struct.calcsize(LFN_ENTRY_FORMAT)
+
+
