@@ -1,14 +1,20 @@
 import os
 import csv
 import sqlite3
+from .error import *
+
 
 class CSVWriter(object):
 
     def __init__(self, name, path=None):
-        if os.path.exists(path):
-            self.csv_path = os.path.join(path, name)
+        if path:
+            if os.path.exists(path):
+                self.csv_path = os.path.join(path, name)
+            else:
+                raise InvalidPathError(path)
         else:
             self.csv_path = os.path.join(os.getcwd(), name)
+
         self.csv_file = open(self.csv_path, 'w')
         # The following line may not work on Linux
         # Checking the platform and processing it dynamically
