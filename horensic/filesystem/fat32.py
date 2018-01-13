@@ -12,6 +12,14 @@ class FAT32(object):
 
         self.volume = None
         self.volume_path = str()
+        self.cluster = int()
+
+        self.fat1 = []
+        self.fat2 = []
+
+        self.root_offset = int()
+        self.root_dir = []
+        self.data_area_offset = int()
 
         if not volume:
             self.volume_path = "\\\\.\\" + os.getenv("SystemDrive")
@@ -57,8 +65,6 @@ class FAT32(object):
         setattr(self, 'next_free_cluster', fsinfo['next_free_cluster'])
 
     def fat(self):
-        self.fat1 = []
-        self.fat2 = []
         self.fat1_offset = self.fat32['reserved_sc'] * self.fat32['bps']
 
         self.volume.seek(self.fat1_offset)
@@ -70,17 +76,32 @@ class FAT32(object):
 
     def get_root(self):
         root_run = []
-        self.root_dir = []
         self.data_area_offset = self.fat1_offset + (self.fat_sz * self.fat32['num_fats'])
-        self.root_offset =  self.data_area_offset + (self.fat32['root_dir_cluster'] - 2) * self.cluster
+        self.root_offset = self.data_area_offset + (self.fat32['root_dir_cluster'] - 2) * self.cluster
         self.read_fat(root_run, self.fat32['root_dir_cluster'])
 
         self.volume.seek(self.root_offset)
         root = self.volume.read(len(root_run) * self.cluster)
         self.root_dir = DirectoryEntry(root).dir_list
 
-    def next_dir(self, name):
-        pass
+    def next_dir(self, parent, name):
+
+        child_entry = None
+
+        for entry in parent:
+            if name in entry['name']:
+                child_entry = entry
+                break
+
+        dir_run = []
+        dir_offset = self.data_area_offset + (child_entry['start_cluster'] - 2) * self.cluster
+        self.read_fat(dir_run, child_entry['start_cluster'])
+
+        self.volume.seek(dir_offset)
+        child = self.volume.read(len(dir_run) * self.cluster)
+        child_dir = DirectoryEntry(child).dir_list
+
+        return child_dir
 
     def read_fat(self, c_run, cluster):
         next_cluster = self.fat1[cluster]
@@ -98,7 +119,6 @@ class DirectoryEntry(object):
     def __init__(self, buf):
 
         self.dir_list = []
-
         lfn_stack = []
         lfn_count = 0
 
@@ -124,11 +144,12 @@ class DirectoryEntry(object):
             else:
                 dir_entry['name'] = dir_entry['name'].decode('utf8')
 
-            dir_entry['created_time'], dir_entry['modified_time'], dir_entry['accessed_time'] = self.timestamp(dir_entry)
-
+            self.timestamp(dir_entry)
+            self.start_cluster(dir_entry)
             self.dir_list.append(dir_entry)
 
-    def long_file_name(self, lfn_stack):
+    @staticmethod
+    def long_file_name(lfn_stack):
 
         meta_entry = None
         name = str()
@@ -151,12 +172,18 @@ class DirectoryEntry(object):
         meta_entry['name'] = name
         return meta_entry
 
-    def timestamp(self, entry):
+    @staticmethod
+    def timestamp(entry):
         created = struct.pack('HHB', entry['cdate'], entry['ctime'], entry['ctimet'])
-        ctime = fat32time(created)
-        modified = struct.pack('HH', entry['mdate'], entry['mtime'])
-        mtime = fat32time(modified)
-        accessed = struct.pack('H', entry['adate'])
-        atime = fat32time(accessed)
+        entry['created_time'] = fat32time(created)
 
-        return ctime, mtime, atime
+        modified = struct.pack('HH', entry['mdate'], entry['mtime'])
+        entry['modified_time'] = fat32time(modified)
+
+        accessed = struct.pack('H', entry['adate'])
+        entry['accessed_time'] = fat32time(accessed)
+
+    @staticmethod
+    def start_cluster(entry):
+        cluster = struct.pack('>HH', entry['start_cluster_hi'], entry['start_cluster_lo'])
+        entry['start_cluster'] = struct.unpack('>I', cluster)[0]

@@ -510,7 +510,7 @@ FSINFO_FILED = [
 FSINFO_SZ = struct.calcsize(FSINFO_FORMAT)
 
 # Directory Entry
-DIR_ENTRY_FORMAT = '<8s3sbbbHHHHHHHI'
+DIR_ENTRY_FORMAT = '<8s3sBBBHHHHHHHI'
 DIR_ENTRY_FILED = [
     'name',
     'extension',
