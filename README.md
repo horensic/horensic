@@ -17,17 +17,16 @@ horensic 라이브러리에서 필요한 모듈을 가져오거나 미리 작성
 
 ### Supporting
 
-library:
 * EVTX
 * FAT32
 * NTFS (MFT, $I30)
 * Output (CSV, SQLite, HTML)
 * Predefined regular expression
-* Timestamp (Filetime, ...)
+* Timestamp (NTFS, FAT32, ...)
 * TODO
     * Korean
 
-scripts:
+__scripts__
 * File hashing
 * JPG steganography scan
 * MFT / $I30 parser

@@ -1,5 +1,7 @@
-import os
+import os, sys
 from .defines import *
+sys.path.insert(0, os.path.dirname(os.path.abspath('../utils')))
+from utils.timestamp import fat32time
 
 
 class FAT32(object):
@@ -75,35 +77,9 @@ class FAT32(object):
 
         self.volume.seek(self.root_offset)
         root = self.volume.read(len(root_run) * self.cluster)
+        self.root_dir = DirectoryEntry(root).dir_list
 
-        lfn_stack = list()
-        lfn_count = 0
-
-        for i in range(0, len(root), DIR_ENTRY_SZ):
-            entry = root[i:i+DIR_ENTRY_SZ]
-            dir_entry = dict(zip(DIR_ENTRY_FILED, struct.unpack(DIR_ENTRY_FORMAT, entry)))
-
-            if dir_entry['name'][0] == 0x00:  # end of directory entry
-                break
-            elif dir_entry['name'][0] == 0xE5:  # deleted file(directory)
-                continue
-
-            if dir_entry['attribute'] == 0x0F:  # Long File Name
-                if dir_entry['name'][0] & 0x40 == 0x40:
-                    lfn_count =  dir_entry['name'][0] ^ 0x40
-                lfn_stack.append(entry)
-                lfn_count -= 1
-                continue
-            elif len(lfn_stack) > 0 and lfn_count == 0:
-                lfn_stack.append(entry)
-                dir_entry = self.long_file_name(lfn_stack)
-                lfn_stack = []
-            else:
-                dir_entry['name'] = dir_entry['name'].decode('utf8')
-
-            self.root_dir.append(dir_entry)
-
-    def next_dir(self):
+    def next_dir(self, name):
         pass
 
     def read_fat(self, c_run, cluster):
@@ -116,21 +92,71 @@ class FAT32(object):
             self.read_fat(c_run, next_cluster)
         return
 
+
+class DirectoryEntry(object):
+
+    def __init__(self, buf):
+
+        self.dir_list = []
+
+        lfn_stack = []
+        lfn_count = 0
+
+        for i in range(0, len(buf), DIR_ENTRY_SZ):
+            entry = buf[i:i + DIR_ENTRY_SZ]
+            dir_entry = dict(zip(DIR_ENTRY_FILED, struct.unpack(DIR_ENTRY_FORMAT, entry)))
+
+            if dir_entry['name'][0] == 0x00:  # end of directory entry
+                break
+            elif dir_entry['name'][0] == 0xE5:  # deleted file(directory)
+                continue
+
+            if dir_entry['attribute'] == 0x0F:  # Long File Name
+                if dir_entry['name'][0] & 0x40 == 0x40:
+                    lfn_count = dir_entry['name'][0] ^ 0x40
+                lfn_stack.append(entry)
+                lfn_count -= 1
+                continue
+            elif len(lfn_stack) > 0 and lfn_count == 0:
+                lfn_stack.append(entry)
+                dir_entry = self.long_file_name(lfn_stack)
+                lfn_stack = []
+            else:
+                dir_entry['name'] = dir_entry['name'].decode('utf8')
+
+            dir_entry['created_time'], dir_entry['modified_time'], dir_entry['accessed_time'] = self.timestamp(dir_entry)
+
+            self.dir_list.append(dir_entry)
+
     def long_file_name(self, lfn_stack):
-        dir_entry = None
+
+        meta_entry = None
         name = str()
         for i in range(len(lfn_stack)):
             entry = lfn_stack.pop()
             dir_entry = dict(zip(DIR_ENTRY_FILED, struct.unpack(DIR_ENTRY_FORMAT, entry)))
+
             if dir_entry['attribute'] == 0x0F:
                 lfn_entry = dict(zip(LFN_ENTRY_FILED, struct.unpack(LFN_ENTRY_FORMAT, entry)))
                 lfn = lfn_entry['name1'] + lfn_entry['name2'] + lfn_entry['name3']
                 lfn = lfn.decode('utf16')
                 end_of_name = lfn.find(b'\xFF\xFF'.decode('utf16'))
+
                 if end_of_name > 0:
                     lfn = lfn[:end_of_name]
                 name += lfn
+            else:
+                meta_entry = dir_entry
 
-        dir_entry['name'] = name
-        return dir_entry
+        meta_entry['name'] = name
+        return meta_entry
 
+    def timestamp(self, entry):
+        created = struct.pack('HHB', entry['cdate'], entry['ctime'], entry['ctimet'])
+        ctime = fat32time(created)
+        modified = struct.pack('HH', entry['mdate'], entry['mtime'])
+        mtime = fat32time(modified)
+        accessed = struct.pack('H', entry['adate'])
+        atime = fat32time(accessed)
+
+        return ctime, mtime, atime

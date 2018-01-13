@@ -20,7 +20,7 @@ class NTFS(object):
         if not volume:
             self.volume_path = "\\\\.\\" + os.getenv("SystemDrive")
         else:
-            self.volume_path = "\\\\.\\" + volume.split('\\')[-1]
+            self.volume_path = "\\\\.\\" + volume.split('\\')[0]
 
         self.read_vbr()
 
