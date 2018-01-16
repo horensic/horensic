@@ -543,3 +543,83 @@ LFN_ENTRY_FILED = [
 LFN_ENTRY_SZ = struct.calcsize(LFN_ENTRY_FORMAT)
 
 
+""" EXT4 """
+
+# reference site: https://ext4.wiki.kernel.org/index.php/Ext4_Disk_Layout
+
+# Super Block
+
+SB_FORMAT = ''
+SB_FILED = []
+SB_SZ = struct.calcsize(SB_FORMAT)
+
+# Group Descriptor table
+
+GDT_FORMAT = ''
+GDT_FILED = []
+GDT_SZ = struct.calcsize(GDT_FORMAT)
+
+# i-node
+
+# ext2/3 inode size = 128 bytes
+# ext4 inode size = inode structure size (156 bytes) + extra_isize (28 bytes) = 256 bytes
+# in ext4 case, Extent tree should be checked
+INODE_FORMAT = ''
+INODE_FILED = [
+    'mode',
+    'uid',
+    'size_lo',
+    'atime',
+    'ctime',
+    'mtime',
+    'dtime',
+    'gid',
+    'links_count',
+    'blocks_lo',
+    'flags',
+    'union_osd1',
+    'block',
+    'generation',
+    'file_acl_lo',
+    'dir_acl',
+    'obso_faddr',
+    'union_osd2',
+    'extra_isize',
+    'checksum_hi',
+    'ctime_extra',
+    'mtime_extra',
+    'atime_extra',
+    'crtime',
+    'crtime_extra',
+    'version_hi',
+    'projid'
+]
+INODE_SZ = struct.calcsize(INODE_FORMAT)
+
+# Extent Tree Header
+
+EXTENT_TREE_HDR_FORMAT = ''
+EXTENT_TREE_HDR_FILED = []
+EXTENT_TREE_HDR_SZ = struct.calcsize(EXTENT_TREE_HDR_FORMAT)
+
+# Extent Tree Leaf Node
+
+ET_LEAF_NODE_FORMAT = '<IHHI'
+ET_LEAF_NODE_FILED = [
+    'block',
+    'len',
+    'start_hi',
+    'start_lo'
+]
+ET_LEAF_NODE_SZ = struct.calcsize(ET_LEAF_NODE_FORMAT)
+
+# Directory Entry
+EXT_DIR_ENTRY_FORMAT = '<IHBB'
+EXT_DIR_ENTRY_FILED = [
+    'inode',
+    'rec_len',
+    'name_len',
+    'file_type'
+    # 'name'
+]
+EXT_DIR_ENTRY_SZ = struct.calcsize(EXT_DIR_ENTRY_FORMAT)
