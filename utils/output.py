@@ -4,6 +4,36 @@ import sqlite3
 from .error import *
 
 
+def HexView(buf, ofs=0):
+    offset = ofs
+
+    while True:
+        data = buf[:16]
+        buf = buf[16:]
+        ldata = len(data)
+
+        if ldata == 0:
+            break
+
+        output = '{0:08X} : '.format(offset)
+
+        for i in range(ldata):
+            output += '{0:02X} '.format(data[i])
+
+        if ldata != 16:
+            for i in range(16 - ldata):
+                output += '{0:2s}'.format('   ')
+
+        for i in range(ldata):
+            if(data[i]) >= 0x20 and (data[i]) <= 0x7E:
+                output += '{0:s}'.format(chr(data[i]))
+            else:
+                output += '{0:s}'.format('.')
+
+        print(output)
+        offset += 16
+
+
 class CSVWriter(object):
 
     def __init__(self, name, path=None):
