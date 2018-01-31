@@ -25,6 +25,7 @@ horensic 라이브러리에서 필요한 모듈을 가져오거나 미리 작성
 * Timestamp (NTFS, FAT32, ...)
 * TODO
     * Korean
+    * PE, ELF
 
 __scripts__
 * File hashing
